@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lấy Key Game Hàng Ngày</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #1e1e2f, #2a2a4e);
+      color: #fff;
+      overflow: hidden;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 2rem;
+      border-radius: 15px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      max-width: 500px;
+      width: 90%;
+      transition: transform 0.3s ease;
+    }
+    .container:hover {
+      transform: translateY(-10px);
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: #00ffcc;
+      text-shadow: 0 0 10px #00ffcc;
+    }
+    .key-date {
+      font-size: 0.9rem;
+      color: #cccccc;
+      margin-bottom: 1.5rem;
+    }
+    .key-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      border: 1px solid #00ffcc;
+    }
+    #keyText {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: 2px;
+    }
+    .envelope {
+      cursor: pointer;
+      font-size: 2rem;
+      color: #00ffcc;
+      transition: transform 0.3s ease, color 0.3s ease;
+    }
+    .envelope:hover {
+      color: #00cc99;
+      transform: scale(1.3) rotate(5deg);
+    }
+    #copiedMsg {
+      display: none;
+      margin-top: 1.5rem;
+      padding: 0.8rem;
+      background: #28a745;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 500;
+      animation: fadeInOut 2s ease-in-out;
+      box-shadow: 0 0 15px rgba(40, 167, 69, 0.5);
+    }
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateY(10px); }
+      10% { opacity: 1; transform: translateY(0); }
+      90% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(10px); }
+    }
+    .bg-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+      animation: pulse 10s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.3; }
+      50% { transform: scale(1.2); opacity: 0.5; }
+      100% { transform: scale(1); opacity: 0.3; }
+    }
+    @media (max-width: 600px) {
+      h1 { font-size: 1.5rem; }
+      #keyText { font-size: 1rem; }
+      .envelope { font-size: 1.5rem; }
+      .container { padding: 1.5rem; }
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="bg-animation"></div>
+  <div class="container">
+    <h1>Lấy Key Game Hàng Ngày</h1>
+    <div class="key-date" id="keyDate">Đang tải...</div>
+    <div class="key-container">
+      <span id="keyText">Đang tải...</span>
+      <span class="envelope" onclick="copyKey()">✉️</span>
+    </div>
+    <div id="copiedMsg">Đã copy key!</div>
+  </div>
+  <script>
+    // Cấu hình SheetDB API
+    const SHEETDB_API = 'https://sheetdb.io/api/v1/tvmy9ezg0xkh9'; // Endpoint bạn cung cấp
+
+    async function fetchKeysFromSheet() {
+      try {
+        const response = await fetch(SHEETDB_API);
+        const data = await response.json();
+        // SheetDB trả về mảng đối tượng, lấy giá trị cột A
+        return data.map(row => row.A).filter(key => key); // Lọc bỏ ô trống
+      } catch (error) {
+        console.error('Lỗi lấy key từ SheetDB:', error);
+        return null;
+      }
+    }
+
+    async function getDailyKey() {
+      const today = new Date().toISOString().split('T')[0];
+      const storedDate = localStorage.getItem('keyDate');
+      const storedKey = localStorage.getItem('dailyKey');
+
+      // Nếu ngày hiện tại khớp và có key lưu trữ, trả về key đó
+      if (storedDate === today && storedKey) {
+        return storedKey;
+      }
+
+      // Lấy key từ SheetDB
+      const keyList = await fetchKeysFromSheet();
+      if (!keyList || keyList.length === 0) {
+        return 'Lỗi: Không lấy được key';
+      }
+
+      // Tính chỉ số key dựa trên ngày
+      const startDate = new Date('2025-07-01');
+      const currentDate = new Date(today);
+      const dayDiff = Math.floor((currentDate - startDate) / (1000 * 60 * 60 * 24));
+      const keyIndex = dayDiff % keyList.length; // Lặp lại danh sách key
+      const newKey = keyList[keyIndex] || 'Không có key';
+
+      // Lưu key và ngày vào localStorage
+      localStorage.setItem('keyDate', today);
+      localStorage.setItem('dailyKey', newKey);
+      return newKey;
+    }
+
+    function updateKeyDisplay() {
+      getDailyKey().then(key => {
+        document.getElementById('keyText').textContent = key;
+        document.getElementById('keyDate').textContent = `Key ngày: ${new Date().toLocaleDateString('vi-VN')}`;
+      }).catch(err => {
+        console.error('Lỗi hiển thị key:', err);
+        document.getElementById('keyText').textContent = 'Lỗi tải key';
+        document.getElementById('keyDate').textContent = 'Không thể tải key';
+      });
+    }
+
+    function copyKey() {
+      const key = document.getElementById('keyText').textContent.trim();
+      if (key === 'Đang tải...' || key === 'Lỗi tải key') {
+        alert('Key chưa sẵn sàng! Vui lòng thử lại sau.');
+        return;
+      }
+      navigator.clipboard.writeText(key)
+        .then(() => {
+          const msg = document.getElementById('copiedMsg');
+          msg.style.display = 'block';
+          setTimeout(() => msg.style.display = 'none', 2000);
+        })
+        .catch(err => {
+          console.error('Lỗi sao chép key:', err);
+          alert('Không thể sao chép key! Vui lòng thử lại.');
+        });
+    }
+
+    // Cập nhật key khi tải trang
+    updateKeyDisplay();
+  </script>
+</body>
+</html>
